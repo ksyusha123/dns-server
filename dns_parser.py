@@ -82,9 +82,9 @@ class DNSParser:
             current += 1 + part_length
         return parts
 
-    def get_info_for_answer_type(self, answer_part, dns_response,
-                                 full_dns_answer,
-                                 answer_type, answer_count):
+    def add_info_to_resp_and_return_ans_tail(self, answer_part, dns_response,
+                                             full_dns_answer,
+                                             answer_type, answer_count):
         for _ in range(answer_count):
             response_type = int.from_bytes(answer_part[2:4], "big")
             response_length = int.from_bytes(answer_part[10:12], "big")
@@ -96,7 +96,8 @@ class DNSParser:
             else:
                 response = self.parse_ipv6(response)
             dns_response["body"][answer_type].append({
-                "response_name": answer_part[:2],
+                "response_name": self.parse_name(answer_part[:2],
+                                                 full_dns_answer),
                 "response_type": response_type,
                 "response_class": int.from_bytes(answer_part[4:6], "big"),
                 "ttl": int.from_bytes(answer_part[6:10], "big"),
@@ -124,7 +125,8 @@ class DNSParser:
         for _ in range(dns_response["header"]["question_count"]):
             request_end_byte = tail_dns_answer.find(0) + 1
             dns_response["body"]["question"].append(
-                {"request": tail_dns_answer[:request_end_byte],
+                {"request": self.parse_name(tail_dns_answer[
+                                            :request_end_byte], dns_answer),
                  "question_type": int.from_bytes(
                      tail_dns_answer[request_end_byte:request_end_byte + 2],
                      "big"),
@@ -134,19 +136,24 @@ class DNSParser:
             tail_dns_answer = tail_dns_answer[request_end_byte + 4:]
 
         answer_part = tail_dns_answer
-        answer_part = self.get_info_for_answer_type(answer_part, dns_response,
-                                                    dns_answer,
-                                                    "answers",
-                                                    dns_response["header"][
-                                                        "answers_count"])
-        answer_part = self.get_info_for_answer_type(answer_part, dns_response,
-                                                    dns_answer,
-                                                    "authoritative",
-                                                    dns_response["header"][
-                                                        "auth_count"])
-        answer_part = self.get_info_for_answer_type(answer_part, dns_response,
-                                                    dns_answer,
-                                                    "additional",
-                                                    dns_response["header"][
-                                                        "additional_count"])
+        answer_part = self.add_info_to_resp_and_return_ans_tail(
+            answer_part, dns_response, dns_answer, "answers",
+            dns_response["header"]["answers_count"])
+        answer_part = self.add_info_to_resp_and_return_ans_tail(
+            answer_part, dns_response, dns_answer, "authoritative",
+            dns_response["header"]["auth_count"])
+        answer_part = self.add_info_to_resp_and_return_ans_tail(
+            answer_part, dns_response, dns_answer, "additional",
+            dns_response["header"]["additional_count"])
         return dns_response
+
+    @staticmethod
+    def get_auth_server_ipv4(dns_response, auth_server):
+        filtered_resp = filter(lambda ans: ans["response_type"] == 1 and
+                                           ans["response_name"] ==
+                                           auth_server,
+                               dns_response["body"]["additional"])
+        try:
+            return next(filtered_resp)["response"]
+        except StopIteration:
+            return None

@@ -14,11 +14,15 @@ class DNSResolver:
         dns_request = self.parser.form_dns_request(domain_name)
         dns_answer = self.make_request(dns_request, root_host)
         dns_response = self.parser.parse_dns_answer(dns_answer)
-        while len(dns_response["body"]["answers"]) == 0:
-            authoritative_server = \
-                dns_response["body"]["additional"][0]["response"]
+        # while len(dns_response["body"]["answers"]) == 0:
+        for i in range(domain_name.count('.') + 1):
+            auth_server = dns_response["body"]["authoritative"][0]["response"]
+            auth_server_ipv4 = self.parser.get_auth_server_ipv4(
+                dns_response, auth_server)
+            if auth_server_ipv4 is None:
+                break
             dns_request = self.parser.form_dns_request(domain_name)
-            dns_answer = self.make_request(dns_request, authoritative_server)
+            dns_answer = self.make_request(dns_request, auth_server_ipv4)
             dns_response = self.parser.parse_dns_answer(dns_answer)
         return dns_response
 
