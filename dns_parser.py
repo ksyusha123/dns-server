@@ -1,31 +1,5 @@
 class DNSParser:
 
-    def form_dns_request(self, request):
-        header = self.form_dns_header()
-        body = self.form_dns_body(request)
-        request_type = bytes([0, 1])
-        request_class = bytes([0, 1])
-        return header + body + request_type + request_class
-
-    @staticmethod
-    def form_dns_header():
-        request_id = bytearray("id", "utf-8")
-        flags = bytes([0, 0])
-        requests_count = bytes([0, 1])
-        answers_count = bytes([0, 0])
-        add_count = bytes([0, 0, 0, 0])
-        return request_id + flags + requests_count + answers_count + add_count
-
-    @staticmethod
-    def form_dns_body(request):
-        domain_parts = request.split('.')
-        bytes_request = bytes(0)
-        for domain_part in domain_parts:
-            bytes_request += bytes([len(domain_part)]) + bytearray(domain_part,
-                                                                   "utf-8")
-        bytes_request += bytes([0])
-        return bytes_request
-
     @staticmethod
     def parse_ipv4(ipv4_bytes):
         ipv4_parts = []
@@ -107,45 +81,58 @@ class DNSParser:
             answer_part = answer_part[12 + response_length:]
         return answer_part
 
-    def parse_dns_answer(self, dns_answer):
-        dns_response = {
-            "header": {"transaction_id": int.from_bytes(dns_answer[:2], "big"),
-                       "resp_code": int.from_bytes(dns_answer[2:4], "big"),
-                       "question_count": int.from_bytes(dns_answer[4:6],
-                                                        "big"),
-                       "answers_count": int.from_bytes(dns_answer[6:8], "big"),
-                       "auth_count": int.from_bytes(dns_answer[8:10], "big"),
-                       "additional_count": int.from_bytes(dns_answer[10:12],
-                                                          "big")}}
+    def parse(self, dns_answer):
+        header = self.parse_header(dns_answer[:12])
+        dns_response = {"header": header}
 
-        tail_dns_answer = dns_answer[12:]
+        tail = dns_answer[12:]
         dns_response["body"] = {"question": [], "answers": [],
                                 "authoritative": [], "additional": []}
 
-        for _ in range(dns_response["header"]["question_count"]):
-            request_end_byte = tail_dns_answer.find(0) + 1
-            dns_response["body"]["question"].append(
-                {"request": self.parse_name(tail_dns_answer[
-                                            :request_end_byte], dns_answer),
-                 "question_type": int.from_bytes(
-                     tail_dns_answer[request_end_byte:request_end_byte + 2],
-                     "big"),
-                 "question_class": int.from_bytes(
-                     tail_dns_answer[request_end_byte + 2:
-                                     request_end_byte + 4], "big")})
-            tail_dns_answer = tail_dns_answer[request_end_byte + 4:]
+        dns_response["body"]["question"], tail = self.parse_question(
+            tail, dns_response["header"]["question_count"], dns_answer)
 
-        answer_part = tail_dns_answer
-        answer_part = self.add_info_to_resp_and_return_ans_tail(
-            answer_part, dns_response, dns_answer, "answers",
-            dns_response["header"]["answers_count"])
-        answer_part = self.add_info_to_resp_and_return_ans_tail(
-            answer_part, dns_response, dns_answer, "authoritative",
-            dns_response["header"]["auth_count"])
-        answer_part = self.add_info_to_resp_and_return_ans_tail(
-            answer_part, dns_response, dns_answer, "additional",
-            dns_response["header"]["additional_count"])
+        self.parse_answers(tail, dns_response, dns_answer)
+
         return dns_response
+
+    @staticmethod
+    def parse_header(bytes_header):
+        return {"transaction_id": int.from_bytes(bytes_header[:2], "big"),
+                "resp_code": int.from_bytes(bytes_header[2:4], "big"),
+                "question_count": int.from_bytes(bytes_header[4:6],
+                                                 "big"),
+                "answers_count": int.from_bytes(bytes_header[6:8], "big"),
+                "auth_count": int.from_bytes(bytes_header[8:10], "big"),
+                "additional_count": int.from_bytes(bytes_header[10:12],
+                                                   "big")}
+
+    def parse_question(self, tail, q_count, dns_answer):
+        questions = []
+        for _ in range(q_count):
+            request_end_byte = tail.find(0) + 1
+            questions.append(
+                {"request": self.parse_name(
+                    tail[:request_end_byte], dns_answer),
+                    "question_type": int.from_bytes(
+                        tail[request_end_byte:request_end_byte + 2],
+                        "big"),
+                    "question_class": int.from_bytes(
+                        tail[request_end_byte + 2:
+                             request_end_byte + 4], "big")})
+            tail = tail[request_end_byte + 4:]
+        return questions, tail
+
+    def parse_answers(self, tail, dns_response, dns_answer):
+        tail = self.add_info_to_resp_and_return_ans_tail(
+            tail, dns_response, dns_answer, "answers",
+            dns_response["header"]["answers_count"])
+        tail = self.add_info_to_resp_and_return_ans_tail(
+            tail, dns_response, dns_answer, "authoritative",
+            dns_response["header"]["auth_count"])
+        tail = self.add_info_to_resp_and_return_ans_tail(
+            tail, dns_response, dns_answer, "additional",
+            dns_response["header"]["additional_count"])
 
     @staticmethod
     def get_auth_server_ipv4(dns_response, auth_server):
