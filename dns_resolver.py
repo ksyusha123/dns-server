@@ -1,5 +1,3 @@
-import socket
-
 from dns_parser import DNSParser
 from dns_request_maker import DNSRequestMaker
 
@@ -8,9 +6,9 @@ port = 53
 
 
 class DNSResolver:
-    def __init__(self, connection_type="udp"):
+    def __init__(self):
         self.parser = DNSParser()
-        self.request_maker = DNSRequestMaker(connection_type)
+        self.request_maker = DNSRequestMaker()
 
     def resolve(self, domain_name):
         dns_response = b''
@@ -32,11 +30,3 @@ class DNSResolver:
                 break
 
         return dns_response
-
-    # @staticmethod
-    # def make_request(dns_request, host, type=socket.SOCK_DGRAM):
-    #     server_address = (host, port)
-    #     with socket.socket(socket.AF_INET, type) as sock:
-    #         sock.sendto(dns_request, server_address)
-    #         answer, address = sock.recvfrom(10000000)
-    #     return answer

@@ -3,19 +3,11 @@ import socket
 
 class DNSRequestMaker:
 
-    def __init__(self, connection_type="udp"):
-        self.connection_type = connection_type
+    def __init__(self):
         self.port = 53
 
     def make_request(self, request, host):
         address = (host, self.port)
-        return self.make_request_udp(request, address)
-        # if self.connection_type == 'udp':
-        #     return self.make_request_udp(request, address)
-        # return self.make_request_tcp(request, address)
-
-    @staticmethod
-    def make_request_udp(request, address):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.sendto(request, address)
             answer, address = sock.recvfrom(1024)
@@ -46,16 +38,3 @@ class DNSRequestMaker:
                                                                    "utf-8")
         bytes_request += bytes([0])
         return bytes_request
-
-    # @staticmethod
-    # def make_request_tcp(request, address):
-    #     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-    #         sock.connect(address)
-    #         sock.send(request)
-    #         answer = b''
-    #         while True:
-    #             data = sock.recv(128)
-    #             if not data:
-    #                 break
-    #             answer += data
-    #     return answer
