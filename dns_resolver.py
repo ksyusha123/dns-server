@@ -1,5 +1,5 @@
 from dns_parser import DNSParser
-from dns_request_maker import DNSRequestMaker
+from request_maker import DNSRequestMaker
 
 root_host = '199.7.83.42'
 port = 53
