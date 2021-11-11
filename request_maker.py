@@ -20,14 +20,25 @@ class DNSRequestMaker:
         request_class = bytes([0, 1])
         return header + body + request_type + request_class
 
-    @staticmethod
-    def form_dns_header():
+    def form_dns_header(self):
         request_id = bytearray("id", "utf-8")
-        flags = bytes([0, 0])
+        flags = self.form_flags()
         requests_count = bytes([0, 1])
         answers_count = bytes([0, 0])
         add_count = bytes([0, 0, 0, 0])
         return request_id + flags + requests_count + answers_count + add_count
+
+    def form_flags(self):
+        qr = '0'
+        opcode = '0000'
+        aa = '0'
+        tc = '0'
+        rd = '0'
+        ra = '0'
+        z = '000'
+        rcode = '0000'
+        return int(f"{qr}{opcode}{aa}{tc}{rd}{ra}{z}{rcode}", 2)\
+            .to_bytes(2, byteorder="big")
 
     @staticmethod
     def form_dns_body(request):
