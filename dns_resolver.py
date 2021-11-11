@@ -13,12 +13,7 @@ class DNSResolver:
     def resolve(self, domain_name):
         host = root_host
         dns_request = self.request_maker.form_dns_request(domain_name)
-        try:
-            dns_answer = self.request_maker.make_request(dns_request, host)
-            dns_response = self.parser.parse(dns_answer)
-        except:
-            dns_answer = self.request_maker.make_request(dns_request, host)
-            dns_response = self.parser.parse(dns_answer)
+        dns_response = self.try_get_resp(dns_request, host)
         while not dns_response["body"]["answers"]:
             auth_server = dns_response["body"]["authoritative"][0]["response"]
             host = self.parser.get_auth_server_ipv4(
@@ -26,14 +21,15 @@ class DNSResolver:
             if host is None:
                 host = DNSResolver().resolve(auth_server)["body"][
                     "answers"][0]["response"]
-            try:
-                dns_answer = self.request_maker.make_request(dns_request, host)
-                dns_response = self.parser.parse(dns_answer)
-            except:
-                dns_answer = self.request_maker.make_request(dns_request, host)
-                dns_response = self.parser.parse(dns_answer)
+            dns_response = self.try_get_resp(dns_request, host)
 
         return dns_response
 
-    # def try_get_resp(self, dns_request, host):
-        
+    def try_get_resp(self, dns_request, host):
+        try:
+            dns_answer = self.request_maker.make_request(dns_request, host)
+            dns_response = self.parser.parse(dns_answer)
+        except:
+            dns_answer = self.request_maker.make_request(dns_request, host)
+            dns_response = self.parser.parse(dns_answer)
+        return dns_response
