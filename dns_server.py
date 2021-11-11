@@ -8,7 +8,7 @@ from dns_resolver import DNSResolver
 class DnsServerTcp:
 
     def __init__(self):
-        self.port = 53000
+        self.port = 53
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind(("", self.port))
         self.server_socket.listen()
@@ -24,15 +24,16 @@ class DnsServerTcp:
 class DnsServerUdp:
 
     def __init__(self):
-        self.port = 53001
+        self.port = 53
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_socket.bind(("", self.port))
 
     def run(self):
         while True:
             user_request, address = self.server_socket.recvfrom(1024)
-            resp = DNSResolver().resolve(user_request.decode())
-            self.server_socket.sendto(json.dumps(resp).encode(), address)
+            resp, ans = DNSResolver().resolve(user_request)
+            # print(resp)
+            self.server_socket.sendto(ans, address)
 
 
 def main():
