@@ -1,5 +1,4 @@
 import socket
-import json
 import threading
 
 from dns_resolver import DNSResolver
@@ -17,8 +16,8 @@ class DnsServerTcp:
         while True:
             conn, address = self.server_socket.accept()
             user_request = conn.recv(1024)
-            resp = DNSResolver().resolve(user_request.decode())
-            conn.send(json.dumps(resp).encode())
+            resp, ans = DNSResolver().resolve(user_request.decode())
+            conn.send(ans)
 
 
 class DnsServerUdp:
@@ -32,7 +31,6 @@ class DnsServerUdp:
         while True:
             user_request, address = self.server_socket.recvfrom(1024)
             resp, ans = DNSResolver().resolve(user_request)
-            # print(resp)
             self.server_socket.sendto(ans, address)
 
 
