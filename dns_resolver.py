@@ -12,7 +12,6 @@ class DNSResolver:
 
     def resolve(self, dns_request):
         host = root_host
-        # dns_request = self.request_maker.form_dns_request(domain_name)
         dns_response, dns_answer = self.try_get_resp(dns_request, host)
         while not dns_response["body"]["answers"]:
             auth_server = dns_response["body"]["authoritative"][0]["response"]

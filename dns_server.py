@@ -16,7 +16,7 @@ class DnsServerTcp:
         while True:
             conn, address = self.server_socket.accept()
             user_request = conn.recv(1024)
-            resp, ans = DNSResolver().resolve(user_request.decode())
+            resp, ans = DNSResolver().resolve(user_request)
             conn.send(ans)
 
 
